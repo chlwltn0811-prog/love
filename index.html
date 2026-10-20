@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>비밀번호 확인</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome for icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700&display=swap');
+    body {
+      font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
+    }
+
+    /* 틀린 비밀번호 입력 시 흔들림 애니메이션 */
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      20%, 60% { transform: translateX(-8px); }
+      40%, 80% { transform: translateX(8px); }
+    }
+    .shake-animation {
+      animation: shake 0.4s ease-in-out;
+    }
+  </style>
+</head>
+<body class="min-h-screen bg-slate-950 flex items-center justify-center p-4 relative overflow-hidden select-none">
+  <!-- 은은한 배경 그라데이션 장식 -->
+  <div class="absolute -top-32 -left-32 w-80 h-80 bg-indigo-600/20 rounded-full blur-3xl pointer-events-none"></div>
+  <div class="absolute -bottom-32 -right-32 w-80 h-80 bg-rose-600/15 rounded-full blur-3xl pointer-events-none"></div>
+
+  <!-- 메인 인증 카드 -->
+  <div id="authCard" class="w-full max-w-md bg-slate-900/80 border border-slate-800 backdrop-blur-xl rounded-2xl p-7 sm:p-8 shadow-2xl transition-all duration-300">
+    <!-- 자물쇠 아이콘 -->
+    <div class="flex justify-center mb-5">
+      <div id="iconBox" class="w-16 h-16 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 text-2xl transition-all duration-300">
+        <i id="lockIcon" class="fa-solid fa-lock"></i>
+      </div>
+    </div>
+
+    <!-- 안내 문구 -->
+    <div class="text-center mb-6">
+      <h1 class="text-xl sm:text-2xl font-bold text-slate-100 tracking-tight">
+        비밀번호를 입력하시오.
+      </h1>
+      <p class="text-slate-400 text-sm mt-1.5">
+        보호된 페이지로 이동하려면 인증이 필요합니다.
+      </p>
+    </div>
+
+    <!-- 비밀번호 입력 폼 -->
+    <form id="authForm" onsubmit="handleAuth(event)" class="space-y-4">
+      <div class="relative">
+        <input
+          type="password"
+          id="passwordInput"
+          placeholder="비밀번호 입력..."
+          autocomplete="off"
+          autofocus
+          class="w-full px-4 py-3.5 pr-11 bg-slate-950/60 border border-slate-700/80 rounded-xl text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 text-sm transition-all"
+        />
+        <!-- 비밀번호 표시 토글 버튼 -->
+        <button
+          type="button"
+          onclick="togglePasswordVisibility()"
+          class="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-500 hover:text-slate-300 transition-colors"
+          tabindex="-1"
+          title="비밀번호 보이기/숨기기"
+        >
+          <i id="eyeIcon" class="fa-regular fa-eye"></i>
+        </button>
+      </div>
+
+      <!-- 상태/에러 메시지 영역 -->
+      <div id="statusMessage" class="min-h-[22px] text-xs font-medium text-center transition-all"></div>
+
+      <!-- 새 창 차단 대비 직접 이동 링크 (인증 성공 시 노출) -->
+      <div id="fallbackContainer" class="hidden text-center pt-1">
+        <a
+          id="directLink"
+          href="https://youtu.be/D_SqirbpS2w?si=fRFJTJp-iDm7OZAW"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="inline-flex items-center gap-1.5 text-xs font-medium text-indigo-400 hover:text-indigo-300 underline underline-offset-4 transition-colors"
+        >
+          <span>새 창이 안 열리셨나요? 여기를 직접 클릭하세요</span>
+          <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+        </a>
+      </div>
+
+      <!-- 제출 버튼 -->
+      <button
+        type="submit"
+        id="submitBtn"
+        class="w-full py-3.5 px-4 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white font-semibold text-sm rounded-xl shadow-lg shadow-indigo-600/25 transition-all duration-200 flex items-center justify-center gap-2 cursor-pointer"
+      >
+        <span>확인 및 이동</span>
+        <i class="fa-solid fa-arrow-right text-xs"></i>
+      </button>
+    </form>
+  </div>
+
+  <script>
+    // 설정값
+    const CORRECT_PASSWORD = "fo";
+    const TARGET_URL = "https://youtu.be/D_SqirbpS2w?si=fRFJTJp-iDm7OZAW";
+
+    const authCard = document.getElementById("authCard");
+    const passwordInput = document.getElementById("passwordInput");
+    const statusMessage = document.getElementById("statusMessage");
+    const submitBtn = document.getElementById("submitBtn");
+    const lockIcon = document.getElementById("lockIcon");
+    const iconBox = document.getElementById("iconBox");
+    const eyeIcon = document.getElementById("eyeIcon");
+    const fallbackContainer = document.getElementById("fallbackContainer");
+
+    // 비밀번호 보기/숨기기 토글
+    function togglePasswordVisibility() {
+      if (passwordInput.type === "password") {
+        passwordInput.type = "text";
+        eyeIcon.className = "fa-regular fa-eye-slash";
+      } else {
+        passwordInput.type = "password";
+        eyeIcon.className = "fa-regular fa-eye";
+      }
+    }
+
+    // 인증 처리 로직
+    function handleAuth(event) {
+      event.preventDefault();
+
+      const enteredValue = passwordInput.value;
+
+      // 비밀번호 일치 시
+      if (enteredValue === CORRECT_PASSWORD) {
+        // 성공 UI 상태로 전환
+        statusMessage.textContent = "✓ 인증 완료! 새 창으로 유튜브를 엽니다.";
+        statusMessage.className = "min-h-[22px] text-xs font-medium text-center text-emerald-400";
+        
+        passwordInput.disabled = true;
+        submitBtn.className = "w-full py-3.5 px-4 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-sm rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer shadow-lg shadow-emerald-600/25";
+        submitBtn.innerHTML = '<i class="fa-solid fa-arrow-up-right-from-square text-xs"></i><span>유튜브 바로 열기</span>';
+
+        iconBox.className = "w-16 h-16 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 text-2xl transition-all duration-300";
+        lockIcon.className = "fa-solid fa-lock-open";
+
+        // 브라우저 팝업 차단 대비 보조 링크 표시
+        fallbackContainer.classList.remove("hidden");
+
+        // 새 창 열기 (noopener, noreferrer 설정)
+        const newWindow = window.open(TARGET_URL, "_blank", "noopener,noreferrer");
+
+        // 만약 브라우저 보안/팝업 차단기로 새 창이 차단되었을 경우 안내
+        if (!newWindow || newWindow.closed || typeof newWindow.closed === "undefined") {
+          statusMessage.textContent = "팝업이 차단되었습니다. 아래 파란 링크를 직접 눌러주세요.";
+          statusMessage.className = "min-h-[22px] text-xs font-medium text-center text-amber-400";
+        }
+
+        // 성공 상태에서 버튼 클릭 시에도 다시 새 창으로 열리도록 처리
+        submitBtn.onclick = () => {
+          window.open(TARGET_URL, "_blank", "noopener,noreferrer");
+        };
+
+      } else {
+        // 불일치 시 흔들림 애니메이션 및 에러 표시
+        statusMessage.textContent = "✕ 비밀번호가 일치하지 않습니다.";
+        statusMessage.className = "min-h-[22px] text-xs font-medium text-center text-rose-400";
+
+        passwordInput.classList.add("border-rose-500", "focus:border-rose-500", "focus:ring-rose-500/20");
+        
+        // 카드 진동 효과
+        authCard.classList.remove("shake-animation");
+        // reflow 강제 실행으로 애니메이션 리셋
+        void authCard.offsetWidth;
+        authCard.classList.add("shake-animation");
+
+        // 입력창 비우고 포커스
+        passwordInput.value = "";
+        passwordInput.focus();
+
+        // 1.5초 후 에러 테두리 초기화
+        setTimeout(() => {
+          passwordInput.classList.remove("border-rose-500", "focus:border-rose-500", "focus:ring-rose-500/20");
+        }, 1500);
+      }
+    }
+  </script>
+</body>
+</html>
